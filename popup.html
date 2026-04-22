@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 히어로 섹션 -->
+    <header class="hero">
+      <div class="hero-logo">
+        <img src="icons/icon128.png" alt="로고" class="hero-logo-img">
+      </div>
+      <h1 class="hero-title">지식인 답변 생성기</h1>
+    </header>
+
+    <div class="divider"></div>
+
+    <!-- 상품 선택 섹션 -->
+    <section class="card">
+      <div class="card-header">내 상품 목록</div>
+      <div id="productChips" class="product-chips"></div>
+      <div class="product-chips-empty hidden" id="emptyMsg">아직 저장된 상품이 없어요. 아래 <strong>+ 상품 추가</strong>로 시작해보세요</div>
+    </section>
+
+    <!-- 답변 생성 -->
+    <section class="card">
+      <button id="btnGenerate" class="btn btn-accent btn-full">답변 생성하기</button>
+      <div id="generateStatus" class="status-msg hidden"></div>
+      <div id="answerArea" class="answer-area hidden">
+        <div class="answer-label">생성된 답변</div>
+        <div id="answerText" class="answer-text"></div>
+        <div class="answer-actions">
+          <button id="btnCopy" class="btn btn-secondary">복사하기</button>
+          <button id="btnRegenerate" class="btn btn-secondary">재생성</button>
+        </div>
+      </div>
+      <div id="generateError" class="error-msg hidden"></div>
+    </section>
+
+    <!-- 상품 추가/수정 (접이식) -->
+    <section class="card">
+      <button id="btnToggleForm" class="btn btn-secondary btn-full">+ 상품 추가</button>
+      <div id="productForm" class="product-form hidden">
+        <div class="form-group">
+          <label for="productName">제품명</label>
+          <input type="text" id="productName" placeholder="예: OOO 크림">
+        </div>
+        <div class="form-group">
+          <label for="productLink">상품 링크 URL (참고용)</label>
+          <input type="url" id="productLink" placeholder="https://smartstore.naver.com/...">
+        </div>
+        <div class="form-group">
+          <label for="productFeatures">상품 특장점</label>
+          <textarea id="productFeatures" rows="3" placeholder="상품의 주요 특장점을 입력하세요..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button id="btnSaveProduct" class="btn btn-primary">저장</button>
+          <button id="btnDeleteProduct" class="btn btn-danger hidden">삭제</button>
+          <button id="btnCancelEdit" class="btn btn-secondary">취소</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- API 키 설정 버튼 -->
+    <section class="card">
+      <button id="btnOpenApiModal" class="btn btn-secondary btn-full">API 키 설정</button>
+      <div id="apiStatusBadge" class="api-status-badge">
+        <span class="status-dot red"></span>
+        <span>API 키가 설정되지 않았습니다</span>
+      </div>
+    </section>
+
+    <!-- API 키 설정 모달 -->
+    <div id="apiModal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">API 키 설정</h2>
+          <button id="btnCloseModal" class="modal-close">&times;</button>
+        </div>
+
+        <div id="apiModalStatus" class="api-status-badge">
+          <span class="status-dot red"></span>
+          <span>API 키가 설정되지 않았습니다</span>
+        </div>
+
+        <div class="modal-body">
+          <label class="modal-label">Gemini API Key</label>
+          <div class="api-input-row">
+            <input type="password" id="apiKey" placeholder="API 키를 입력하세요">
+            <button id="btnToggleApiKey" class="btn-eye" type="button" title="키 보기/숨기기">
+              <svg id="eyeIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btnSaveApi" class="btn btn-modal-save">저장</button>
+            <button id="btnDeleteApi" class="btn btn-modal-delete">삭제</button>
+          </div>
+
+          <!-- 아코디언: API 키 발급 방법 -->
+          <div class="accordion">
+            <button id="btnAccordion" class="accordion-toggle">
+              <span>API 키 발급 방법</span>
+              <svg class="accordion-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div id="accordionBody" class="accordion-body hidden">
+              <div class="accordion-content">
+                <h4>1. API 키 발급 (무료)</h4>
+                <ol>
+                  <li><a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 접속 후 구글 로그인</li>
+                  <li>"API 키 만들기" 버튼 클릭</li>
+                  <li>생성된 키를 복사하여 위 입력란에 붙여넣기</li>
+                </ol>
+                <hr class="accordion-divider">
+                <h4>2. 유료 플랜 전환 (선택)</h4>
+                <p>무료 플랜으로 블로그, 쓰레드 포스팅은 제약 없이 충분히 사용 가능합니다.<br>단, <u>쓰레드 이미지 생성</u>은 무료 플랜의 요청 제한으로 인해 <strong>유료 플랜을 권장</strong>합니다.</p>
+                <ol>
+                  <li><a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a> 접속</li>
+                  <li>좌측 메뉴 "설정" → "결제" 클릭</li>
+                  <li>유료 플랜 활성화 후 결제 정보 입력</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+
+          <p class="modal-note">API 키는 브라우저에만 저장되며 서버로 전송되지 않습니다. (요청 시에만 사용)</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+      <div class="footer-divider"></div>
+      <p class="footer-text">지식인 답변 생성기</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
