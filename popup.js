@@ -529,23 +529,39 @@ ${question.content}
 답변 본문만 출력해. 추가 설명이나 주석 없이 순수 답변 텍스트만.`;
   }
 
+  // gemini-2.5-flash는 신규 API 키에서 404로 차단됨 → 3.6 우선, 사용 불가 시 다음 모델로
+  const GEMINI_MODELS = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+
+  function getThinkingConfig(model) {
+    if (model.startsWith('gemini-2.5')) return { thinkingBudget: 0 };
+    // 3.x는 thinking을 끌 수 없어 낮은 단계로. flash-latest(3.5)는 minimal 미지원
+    return { thinkingLevel: model === 'gemini-3.6-flash' ? 'minimal' : 'low' };
+  }
+
   async function callGemini(prompt, apiKey) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.75,
-          maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
-      })
-    });
+    let response;
+    for (const model of GEMINI_MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.75,
+            maxOutputTokens: 8192,
+            thinkingConfig: getThinkingConfig(model)
+          }
+        })
+      });
+      if (response.status !== 404) break;
+    }
 
     if (!response.ok) {
-      if (response.status === 400) throw new Error('API 키가 올바르지 않습니다.');
+      const errText = await response.text().catch(() => '');
+      if (response.status === 400 && /API_KEY_INVALID|API key not valid/i.test(errText)) {
+        throw new Error('API 키가 올바르지 않습니다.');
+      }
       if (response.status === 429) throw new Error('API 한도 초과. 잠시 후 다시 시도하세요.');
       throw new Error('API 오류 (' + response.status + ')');
     }
